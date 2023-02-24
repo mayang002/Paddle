@@ -42,8 +42,6 @@ void EmbeddingKernel(const Context &ctx,
   auto *table = table_t->data<T>();
   auto *output = dev_ctx.template Alloc<T>(output_t);
 
-  const int64_t *ids = ids_t->data<int64_t>();
-
   PADDLE_ENFORCE_EQ(
       ids_numel <= std::numeric_limits<int32_t>::max(),
       true,
@@ -56,14 +54,28 @@ void EmbeddingKernel(const Context &ctx,
   size_t xm = table_t->dims()[0];
   size_t n = table_t->dims()[1];
 
-  int r = xpu::embedding<T, int64_t>(dev_ctx.x_context(),
-                                     table,
-                                     ids,
-                                     output,
-                                     xm,
-                                     n,
-                                     ym,
-                                     static_cast<int>(padding_idx));
+  int r = 0;
+  if (ids_t->dtype() == phi::DataType::INT64) {
+    const int64_t *ids = ids_t->data<int64_t>();
+    r = xpu::embedding<T, int64_t>(dev_ctx.x_context(),
+                                   table,
+                                   ids,
+                                   output,
+                                   xm,
+                                   n,
+                                   ym,
+                                   static_cast<int>(padding_idx));
+  } else if (ids_t->dtype() == phi::DataType::INT32) {
+    const int32_t *ids = ids_t->data<int32_t>();
+    r = xpu::embedding<T, int32_t>(dev_ctx.x_context(),
+                                   table,
+                                   ids,
+                                   output,
+                                   xm,
+                                   n,
+                                   ym,
+                                   static_cast<int>(padding_idx));
+  }
 
   PADDLE_ENFORCE_XDNN_SUCCESS(r, "embedding");
 }

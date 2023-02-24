@@ -35,6 +35,9 @@ void SplitKernel(const Context& dev_ctx,
     out_ptrs.push_back(outs[j]->data<T>());
     split_lists.push_back(outs[j]->dims()[axis]);
   }
+  if (x.numel() == 0) {
+    return;
+  }
   int r = xpu::split<T>(dev_ctx.x_context(),
                         x.data<T>(),
                         out_ptrs,
